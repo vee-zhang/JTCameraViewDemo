@@ -1,4 +1,4 @@
-package com.laikang.ftd_ui;
+package com.laikang.jtcameraview;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -18,10 +18,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import static com.laikang.ftd_ui.Constants.CAMERA_FACING_BACK;
-import static com.laikang.ftd_ui.Constants.CAMERA_FACING_FRONT;
+import static com.laikang.jtcameraview.Constants.CAMERA_FACING_BACK;
+import static com.laikang.jtcameraview.Constants.CAMERA_FACING_FRONT;
 
-public class FtdView extends TextureView implements TextureView.SurfaceTextureListener {
+public class JTCameraView extends TextureView implements TextureView.SurfaceTextureListener {
 
     private static final String TAG = "FtdView";
     private boolean isCameraCanBeUse;
@@ -57,19 +57,19 @@ public class FtdView extends TextureView implements TextureView.SurfaceTextureLi
 
     private DisplayOrientationDetector mDisplayOrientationDetector;
 
-    public FtdView(Context context) {
+    public JTCameraView(Context context) {
         this(context, null);
     }
 
-    public FtdView(Context context, AttributeSet attrs) {
+    public JTCameraView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public FtdView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public JTCameraView(Context context, AttributeSet attrs, int defStyleAttr) {
         this(context, attrs, defStyleAttr, 0);
     }
 
-    public FtdView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public JTCameraView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         isCameraCanBeUse = checkCameraHardware(context);
         if (!isCameraCanBeUse) {

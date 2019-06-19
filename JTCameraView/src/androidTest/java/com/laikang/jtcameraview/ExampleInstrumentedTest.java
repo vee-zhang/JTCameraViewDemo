@@ -1,4 +1,4 @@
-package com.laikang.facetonguediagnose;
+package com.laikang.jtcameraview;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("com.laikang.facetonguediagnose", appContext.getPackageName());
+        assertEquals("com.laikang.ftd_ui.test", appContext.getPackageName());
     }
 }

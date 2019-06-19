@@ -1,4 +1,4 @@
-package com.laikang.facetonguediagnose;
+package com.laikang.jtcameraviewdemo;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -13,8 +13,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import com.laikang.ftd_ui.CameraStateListener;
-import com.laikang.ftd_ui.FtdView;
+import com.laikang.jtcameraview.CameraStateListener;
+import com.laikang.jtcameraview.JTCameraView;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -22,15 +22,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static com.laikang.ftd_ui.Constants.CAMERA_FACING_BACK;
-import static com.laikang.ftd_ui.Constants.CAMERA_FACING_FRONT;
+import static com.laikang.jtcameraview.Constants.CAMERA_FACING_BACK;
+import static com.laikang.jtcameraview.Constants.CAMERA_FACING_FRONT;
 
 public class MainActivity extends AppCompatActivity implements CameraStateListener {
     private static final String TAG = "MainActivity";
 
     private static final int REQUEST_CAMERA_PERMISSION = 100;
 
-    private FtdView mFtdView;
+    private JTCameraView mJTCameraView;
 
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
@@ -42,8 +42,8 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mFtdView = findViewById(R.id.ftdv);
-        mFtdView.setListener(this);
+        mJTCameraView = findViewById(R.id.ftdv);
+        mJTCameraView.setListener(this);
     }
 
     /**
@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
         if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
         } else {
-            mFtdView.startPreview();
+            mJTCameraView.startPreview();
         }
     }
 
@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
      * @param v
      */
     public void takePicture(View v){
-        mFtdView.takePicture();
+        mJTCameraView.takePicture();
     }
 
     /**
@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
      * @param v
      */
     public void stopPreview(View v){
-        mFtdView.stopPreview();
+        mJTCameraView.stopPreview();
     }
 
     /**
@@ -84,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
         } else {
             mFacing = CAMERA_FACING_FRONT;
         }
-        mFtdView.setCameraFacing(mFacing);
+        mJTCameraView.setCameraFacing(mFacing);
     }
 
     @Override

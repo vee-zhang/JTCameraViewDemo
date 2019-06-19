@@ -1,4 +1,4 @@
-package com.laikang.ftd_ui;
+package com.laikang.jtcameraview;
 
 import android.graphics.Bitmap;
 

@@ -1,4 +1,4 @@
-package com.laikang.facetonguediagnose;
+package com.laikang.jtcameraviewdemo;
 
 import org.junit.Test;
 
