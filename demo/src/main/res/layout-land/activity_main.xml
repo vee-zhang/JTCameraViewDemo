@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <com.laikang.ftd_ui.FtdView
+        android:id="@+id/ftdv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <Button
+        android:id="@+id/btn_preview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="startPreview"
+        android:text="开始预览"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btn_cupture"/>
+
+    <Button
+        android:id="@+id/btn_cupture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="takePicture"
+        android:text="拍照"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/btn_stop"
+        app:layout_constraintStart_toEndOf="@+id/btn_preview" />
+
+    <Button
+        android:id="@+id/btn_stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="停止预览"
+        android:onClick="stopPreview"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/btn_cupture"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <Button
+        android:id="@+id/btn_facing"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="切换前后摄像头"
+        android:onClick="changeFacing"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</android.support.constraint.ConstraintLayout>

@@ -1,0 +1,14 @@
+*.iml
+.gradle
+/local.properties
+/.idea/modules.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+/.idea/
+JTCameraView/libs/
+JTCameraView/src/main/res/drawable/
+demo/libs/
