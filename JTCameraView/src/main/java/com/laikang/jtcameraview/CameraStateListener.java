@@ -9,5 +9,6 @@ public interface CameraStateListener {
     void onPreviewStop();
     void onShutter();
     void onCupture(Bitmap bitmap);
+    void onCupture(final byte[] data);
     void onCameraClosed();
 }

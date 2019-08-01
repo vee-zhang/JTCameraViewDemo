@@ -129,6 +129,11 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
     }
 
     @Override
+    public void onCupture(byte[] data) {
+
+    }
+
+    @Override
     public void onCameraClosed() {
         showToast("摄像头已关闭");
     }

@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.github.dcendents.android-maven'
 
 android {
     compileSdkVersion 28
@@ -7,8 +9,8 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0-alpha"
+        versionCode 2
+        versionName "1.0.1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -30,4 +32,55 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
+
+def group = "com.william"
+def version = "1.0.2"
+def description = "一个View帮你搞定自定义相机，支持横竖屏切换、前后摄像头切换、预览、拍照等功能。"
+def siteUrl = 'https://github.com/william198824/JTCameraViewDemo'
+def gitUrl = 'git@github.com:william198824/JTCameraViewDemo.git'
+def issueUrl = 'https://github.com/william198824/JTCameraViewDemo/issues'
+
+setGroup(group)
+setVersion(version)
+setDescription(description)
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+task javadoc(type: Javadoc) {
+    options.encoding = "UTF-8"
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    failOnError false
+}
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+def properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+bintray {
+    user = properties.getProperty("user")
+    key = properties.getProperty("key")
+    configurations = ['archives']
+    pkg {
+        repo = "MyProject"
+        name = "JTCameraView"
+        desc = description
+        websiteUrl = siteUrl
+        issueTrackerUrl = issueUrl
+        vcsUrl = gitUrl
+        licenses = ["Apache-2.0"]
+        labels = ['android','camera']
+        publish = true
+        publicDownloadNumbers = true
+    }
 }
