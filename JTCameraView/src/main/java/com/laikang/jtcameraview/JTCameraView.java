@@ -6,7 +6,9 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -14,11 +16,15 @@ import android.util.Size;
 import android.view.TextureView;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.laikang.jtcameraview.Constants.CAMERA_FACING_BACK;
 import static com.laikang.jtcameraview.Constants.CAMERA_FACING_FRONT;
@@ -37,8 +43,8 @@ public class JTCameraView extends TextureView {
     private Camera.CameraInfo mFacingFrontCameraInfo;
     private int mFacingBackCameraId = -1;
     private Camera.CameraInfo mFacingBackCameraInfo;
-    private static int mCameraId = -1;
-    private static Camera.CameraInfo mCameraInfo;
+    private int mCameraId = -1;
+    private Camera.CameraInfo mCameraInfo;
 
     private int mDisplayOrientation;
     private int mPictureOrientation;
@@ -46,6 +52,8 @@ public class JTCameraView extends TextureView {
     private Camera.Size mPreviewSize;
     private Camera.Size mPictureSize;
     private boolean isShowingPreview;
+
+    private final AtomicBoolean isPictureCaptureInProgress = new AtomicBoolean(false);
 
     public boolean isShowingPreview() {
         return isShowingPreview;
@@ -119,6 +127,7 @@ public class JTCameraView extends TextureView {
              */
             @Override
             public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                releaseCamera();
                 return false;
             }
 
@@ -157,9 +166,6 @@ public class JTCameraView extends TextureView {
             mCameraId = mFacingBackCameraId;
         }
         mCameraFacing = facing;
-        openCamera(mCameraId);
-        adjustCameraParameters();
-        configureTransform();
         startPreview();
     }
 
@@ -426,7 +432,7 @@ public class JTCameraView extends TextureView {
         ArrayList<Camera.Size> list = new ArrayList<>(10);
         //去除长款相等的尺寸，这种尺寸容易引起图片倒伏
         for (Camera.Size size : sizeList) {
-            if (size.height != size.width){
+            if (size.height != size.width) {
                 list.add(size);
             }
         }
@@ -438,12 +444,12 @@ public class JTCameraView extends TextureView {
         }
         CameraSizeComparator comparator = new CameraSizeComparator(displayWidth, displayHeight);
 
-        Log.d(TAG, "chooseOptimalSizes: \n");
+//        Log.d(TAG, "chooseOptimalSizes: \n");
         StringBuffer sb = new StringBuffer();
         for (Camera.Size size : sizeList) {
             sb.append(size.height).append("*").append(size.width).append("\n");
         }
-        Log.d(TAG, "chooseOptimalSize: \n" + sb.toString());
+//        Log.d(TAG, "chooseOptimalSize: \n" + sb.toString());
         return Collections.max(list, comparator);
     }
 
@@ -462,6 +468,8 @@ public class JTCameraView extends TextureView {
      */
     public void releaseCamera() {
         if (mCamera != null) {
+            mCamera.setPreviewCallback(null);//todo
+            mCamera.lock();//todo 这俩是啥意思要查一下
             mCamera.release();
             mCamera = null;
             if (mListener != null) {
@@ -473,18 +481,26 @@ public class JTCameraView extends TextureView {
     /**
      * 启动预览
      */
+    byte[] imageData;
+
     public void startPreview() {
         openCamera(mCameraId);
         adjustCameraParameters();
         configureTransform();
         try {
+            mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+                @Override
+                public void onPreviewFrame(byte[] data, Camera camera) {
+                    imageData = data;
+                }
+            });
             mCamera.setPreviewTexture(getSurfaceTexture());
             mCamera.startPreview();
             isShowingPreview = true;
             if (mListener != null) {
                 mListener.onPreviewStart();
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             Log.e(TAG, "startPreview: ", e);
         }
     }
@@ -507,6 +523,28 @@ public class JTCameraView extends TextureView {
      * 拍照
      */
     public void takePicture() {
+        if (!isCameraOpened()) {
+            throw new IllegalStateException(
+                    "Camera is not ready. Call start() before takePicture().");
+        }
+        if (this.isAutoFocus) {
+            mCamera.cancelAutoFocus();
+            mCamera.autoFocus(new Camera.AutoFocusCallback() {
+                @Override
+                public void onAutoFocus(boolean success, Camera camera) {
+                    takePictureInternal();
+                }
+            });
+        } else {
+            takePictureInternal();
+        }
+    }
+
+    private void takePictureInternal() {
+        if (isPictureCaptureInProgress.getAndSet(true)) {
+            return;
+        }
+        Log.e(TAG, "takePictureInternal: 当值为"+isPictureCaptureInProgress+"时调用" );
         mCamera.takePicture(new Camera.ShutterCallback() {
 
             @Override
@@ -518,28 +556,51 @@ public class JTCameraView extends TextureView {
         }, null, null, new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(final byte[] data, Camera camera) {
-                if (mListener != null) {
-//                    mListener.onCupture(data);
-                }
-
+                isPictureCaptureInProgress.set(false);
 
                 Bitmap rawBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                rawBitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos);
-                Bitmap bitmap;
+                rawBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                Bitmap rotedBitmap;
 
                 if (mCameraFacing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                    bitmap = BitmapUtils.mirror(rawBitmap);
+                    rotedBitmap = BitmapUtils.mirror(rawBitmap);
                 } else {
-                    bitmap = BitmapUtils.rotate(rawBitmap, 180f);
+                    rotedBitmap = BitmapUtils.rotate(rawBitmap, 180f);
                 }
                 rawBitmap.recycle();
-                if (mListener != null) {
-                    mListener.onCupture(bitmap);
+                try {
+                    baos.flush();
+                    baos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+                if (mListener != null) {
+                    mListener.onCupture(rotedBitmap);
+                }
+                camera.cancelAutoFocus();
                 camera.startPreview();
             }
         });
+
+    }
+
+    /**
+     * 截取预览帧图像
+     *
+     * @param file
+     */
+    public void cut(File file) {
+        YuvImage image = new YuvImage(this.imageData, mCameraParameters.getPreviewFormat(), mPreviewSize.width, mPreviewSize.height, null);
+        FileOutputStream fos = null;
+        Rect rect = new Rect(0, 0, mPreviewSize.width, mPreviewSize.height);
+        try {
+            fos = new FileOutputStream(file);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        image.compressToJpeg(rect, 100, fos);
+        mListener.onCut(file);
     }
 
     private static class BitmapUtils {
@@ -560,6 +621,14 @@ public class JTCameraView extends TextureView {
             Matrix matrix = new Matrix();
             matrix.postRotate(degree);
             return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        }
+
+        public static Bitmap scale(Bitmap bitmap, int w) {
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            int h = w * height / width;
+
+            return Bitmap.createScaledBitmap(bitmap, w, h, true);
         }
     }
 

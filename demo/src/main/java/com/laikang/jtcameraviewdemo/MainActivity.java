@@ -6,13 +6,17 @@ import android.graphics.Bitmap;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.laikang.jtcameraview.CameraStateListener;
 import com.laikang.jtcameraview.JTCameraView;
 
@@ -21,6 +25,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 
 import static com.laikang.jtcameraview.Constants.CAMERA_FACING_BACK;
 import static com.laikang.jtcameraview.Constants.CAMERA_FACING_FRONT;
@@ -31,11 +36,31 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
     private static final int REQUEST_CAMERA_PERMISSION = 100;
 
     private JTCameraView mJTCameraView;
+    private ImageView iv;
 
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
 
+    private MainHandler mMainHandler = new MainHandler(this);
+
     private int mFacing = CAMERA_FACING_FRONT;
+
+    private static class MainHandler extends Handler{
+        private WeakReference<MainActivity> mainActivity;
+
+        public MainHandler(MainActivity mainActivity) {
+            this.mainActivity = new WeakReference<>(mainActivity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            String path = (String) msg.obj;
+            File img = new File(path);
+            Glide.with(mainActivity.get()).load(img).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE).into(mainActivity.get().iv);
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
 
         mJTCameraView = findViewById(R.id.ftdv);
         mJTCameraView.setListener(this);
+        iv = findViewById(R.id.iv);
     }
 
     /**
@@ -121,15 +147,19 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
                     os.flush();
                     os.close();
                     bitmap.recycle();
+                    Message msg = mMainHandler.obtainMessage();
+                    msg.obj = file.getPath();
+                    mMainHandler.sendMessage(msg);
                 } catch (IOException e) {
                     Log.w(TAG, "图像文件写入失败： " + file, e);
                 }
+
             }
         });
     }
 
     @Override
-    public void onCupture(byte[] data) {
+    public void onCut(File file) {
 
     }
 
@@ -146,7 +176,15 @@ public class MainActivity extends AppCompatActivity implements CameraStateListen
         if (mBackgroundHandler == null) {
             mBackgroundThread = new HandlerThread("background");
             mBackgroundThread.start();
-            mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+            mBackgroundHandler = new Handler(mBackgroundThread.getLooper()){
+                @Override
+                public void handleMessage(Message msg) {
+                    super.handleMessage(msg);
+                    String path = (String)msg.obj;
+                    File img = new File(path);
+                    Glide.with(iv).load(img).into(iv);
+                }
+            };
         }
         return mBackgroundHandler;
     }

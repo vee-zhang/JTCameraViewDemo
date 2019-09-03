@@ -2,6 +2,8 @@ package com.laikang.jtcameraview;
 
 import android.graphics.Bitmap;
 
+import java.io.File;
+
 public interface CameraStateListener {
 
     void onCameraOpend();
@@ -9,6 +11,6 @@ public interface CameraStateListener {
     void onPreviewStop();
     void onShutter();
     void onCupture(Bitmap bitmap);
-    void onCupture(final byte[] data);
+    void onCut(File file);
     void onCameraClosed();
 }
