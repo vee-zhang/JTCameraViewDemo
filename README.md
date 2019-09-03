@@ -18,8 +18,6 @@ implementation 'com.william:JTCameraView:1.0.4'
 2. 拍照
 3. 自动对焦
 
-### f
-
 ### 版本说明
 
 1.0.4版本是通过测试的一个里程碑版本，解决了目前遇到的所有兼容性问题：
