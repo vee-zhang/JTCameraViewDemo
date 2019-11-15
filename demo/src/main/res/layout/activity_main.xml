@@ -10,9 +10,13 @@
         android:id="@+id/ftdv"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        />
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.laikang.jtcameraviewdemo.CoverView
+        android:id="@+id/cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <Button
         android:id="@+id/btn_preview"
@@ -21,14 +25,15 @@
         android:onClick="startPreview"
         android:text="开始预览"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btn_cupture"/>
+        app:layout_constraintEnd_toStartOf="@id/btn_cupture"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <Button
+    <ImageButton
         android:id="@+id/btn_cupture"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="takePicture"
+        android:src="@drawable/ic_camera"
         android:text="拍照"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/btn_stop"
@@ -38,20 +43,21 @@
         android:id="@+id/btn_stop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="停止预览"
         android:onClick="stopPreview"
+        android:text="停止预览"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/btn_cupture"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintStart_toEndOf="@id/btn_cupture" />
 
     <Button
         android:id="@+id/btn_facing"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="切换前后摄像头"
         android:onClick="changeFacing"
+        android:text="切换前后摄像头"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
 
     <ImageView
         android:id="@+id/iv"
@@ -61,6 +67,102 @@
         android:adjustViewBounds="true"
         app:layout_constraintBottom_toTopOf="@+id/btn_preview"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="闪光灯模式："
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Spinner
+        android:id="@+id/spinner_flash"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorAccent"
+        app:layout_constraintStart_toEndOf="@id/tv"
+        app:layout_constraintTop_toTopOf="@id/tv" />
+
+    <TextView
+        android:id="@+id/tv1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="情景模式："
+        app:layout_constraintStart_toStartOf="@id/tv"
+        app:layout_constraintTop_toBottomOf="@id/tv" />
+
+    <Spinner
+        android:id="@+id/spinner_scene_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorAccent"
+        app:layout_constraintStart_toEndOf="@id/tv1"
+        app:layout_constraintTop_toTopOf="@id/tv1" />
+
+    <TextView
+        android:id="@+id/tv2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="白平衡："
+        app:layout_constraintStart_toStartOf="@id/tv1"
+        app:layout_constraintTop_toBottomOf="@id/tv1" />
+
+    <Spinner
+        android:id="@+id/spinner_white_balance_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorAccent"
+        app:layout_constraintStart_toEndOf="@id/tv2"
+        app:layout_constraintTop_toTopOf="@id/tv2" />
+
+    <TextView
+        android:id="@+id/tv3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="滤镜"
+        app:layout_constraintStart_toStartOf="@id/tv2"
+        app:layout_constraintTop_toBottomOf="@id/tv2" />
+
+    <Spinner
+        android:id="@+id/spinner_color_effect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorAccent"
+        app:layout_constraintStart_toEndOf="@id/tv3"
+        app:layout_constraintTop_toTopOf="@id/tv3" />
+
+    <TextView
+        android:id="@+id/tv4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="曝光度："
+        app:layout_constraintStart_toStartOf="@id/tv3"
+        app:layout_constraintTop_toBottomOf="@id/tv3" />
+
+    <SeekBar
+        android:id="@+id/seekBar_expoture"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tv4"
+        app:layout_constraintTop_toTopOf="@id/tv4" />
+
+    <TextView
+        android:id="@+id/tv5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="缩放等级："
+        app:layout_constraintStart_toStartOf="@id/tv4"
+        app:layout_constraintTop_toBottomOf="@id/tv4" />
+
+    <SeekBar
+        android:id="@+id/seekBar_zoom"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tv5"
+        app:layout_constraintTop_toTopOf="@id/tv5" />
 
 
 </android.support.constraint.ConstraintLayout>

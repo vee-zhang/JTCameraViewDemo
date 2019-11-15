@@ -1,22 +1,105 @@
 # JTCameraView
 
-## 一个View帮你搞定自定义相机，支持横竖屏切换、前后摄像头切换、预览、拍照等功能。
-
-### 集成
-
-```groovy
-implementation 'com.william:JTCameraView:1.0.4'
-```
-
-### 使用
-
-先看demo吧，用法很简单，暂时没功夫写了，以后会补上。
+## 一个View帮你搞定Android自定义相机
 
 ### 功能一览
 
 1. 预览
 2. 拍照
 3. 自动对焦
+4. 手动对焦
+5. 白平衡调节
+6. 情景模式调节
+7. 缩放设置
+8. 闪光灯模式设置
+9. 滤镜设置
+10. 曝光度设置
+11. 多摄像头切换
+12. 横竖屏支持
+
+### 集成
+
+```groovy
+implementation 'com.william:JTCameraView:2.0.0-beta'
+```
+
+### 权限
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-feature android:name="android.hardware.camera" />
+<uses-feature android:name="android.hardware.camera.autofocus" />
+<uses-permission android:name="android.permission.FLASHLIGHT"/>
+```
+
+### 使用
+
+```xml
+<com.laikang.jtcameraview.JTCameraView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+```
+
+你没看错，这就是一个单纯的View！你可以任意改变他的小小，它会根据当前尺寸自动设置合适的分辨率，且尽力做到「所见即所得」。
+
+#### 预览
+
+```java
+public void startPreview(View v) {
+    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+    } else {
+        mJTCameraView.startPreview();
+    }
+}
+```
+
+**注意：JTCameraView一切的功能都是以预览为基础，所以必须先预览！当然在预览前要添加权限。**
+
+#### 停止预览
+
+```java
+mJTCameraView.stopPreview();
+```
+
+#### 拍照
+
+```java
+mJTCameraView.takePicture();
+```
+
+#### 摄像头切换
+
+```java
+mJTCameraView.setCameraFacing(mFacing);
+```
+
+#### 设置缩放
+
+```java
+mJTCameraView.setZoom(value);
+```
+
+#### 设置曝光度
+
+```java
+mJTCameraView.setExposure(value);
+```
+
+#### 设置场景
+
+```java
+mJTCameraView.setSceneMode(value);
+```
+
+#### 设置闪光灯
+
+```java
+mJTCameraView.setFlashInternal
+```
+
+#### 人脸识别等更多功能说不清除，请看Demo
 
 ### 版本说明
 

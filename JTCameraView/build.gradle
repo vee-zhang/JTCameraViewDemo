@@ -35,7 +35,7 @@ dependencies {
 }
 
 def group = "com.william"
-def version = "1.0.4"
+def version = "2.0.0-beta"
 def description = "一个View帮你搞定自定义相机，支持横竖屏切换、前后摄像头切换、预览、拍照等功能。"
 def siteUrl = 'https://github.com/william198824/JTCameraViewDemo'
 def gitUrl = 'git@github.com:william198824/JTCameraViewDemo.git'

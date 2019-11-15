@@ -1,15 +1,17 @@
 package com.laikang.jtcameraview;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
+import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Size;
@@ -29,15 +31,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.laikang.jtcameraview.Constants.CAMERA_FACING_BACK;
 import static com.laikang.jtcameraview.Constants.CAMERA_FACING_FRONT;
 
+@SuppressWarnings("deprecation")
 public class JTCameraView extends TextureView {
 
     private static final String TAG = "FtdView";
+    private boolean autoPreview;
     private boolean isCameraCanBeUse;
     private boolean isAutoFocus = true;
-    private int mFlash = Constants.FLASH_AUTO;
+    private int mFlash = Constants.FLASH_RED_EYE;
 
     private Camera mCamera;
     private Camera.Parameters mCameraParameters;
+
+
+    private List<String> sceneModeList;
+    private List<String> whiteBalanceModeList;
+    private List<String> colorEffectModeList;
 
     private int mFacingFrontCameraId = -1;
     private Camera.CameraInfo mFacingFrontCameraInfo;
@@ -53,6 +62,10 @@ public class JTCameraView extends TextureView {
     private Camera.Size mPictureSize;
     private boolean isShowingPreview;
 
+    private int maxZoom;
+
+    private Matrix matrix = new Matrix();
+
     private final AtomicBoolean isPictureCaptureInProgress = new AtomicBoolean(false);
 
     public boolean isShowingPreview() {
@@ -61,13 +74,13 @@ public class JTCameraView extends TextureView {
 
     private Size mSize;
 
-    private CameraStateListener mListener;
+    private JTCameraListener mListener;
 
-    public void setListener(CameraStateListener mListener) {
+    public void setListener(JTCameraListener mListener) {
         this.mListener = mListener;
     }
 
-    private int mCameraFacing = Camera.CameraInfo.CAMERA_FACING_FRONT;
+    private static int mCameraFacing = Camera.CameraInfo.CAMERA_FACING_FRONT;
 
     private DisplayOrientationDetector mDisplayOrientationDetector;
 
@@ -92,9 +105,14 @@ public class JTCameraView extends TextureView {
         }
         setupCameraInfo();
         initTextureView();
+        mDisplayOrientationDetector = new DisplayOrientationDetector(context) {
+            @Override
+            public void onDisplayOrientationChanged(int displayOrientation) {
+                mDisplayOrientation = displayOrientation;
+                setDisplayOrientation();
+            }
+        };
     }
-
-    public boolean autoPreview;
 
     /**
      * View初始化设置
@@ -114,7 +132,7 @@ public class JTCameraView extends TextureView {
             }
 
             /**
-             * surface尺寸发生改变的时候调用，如横竖屏切换。
+             * surface的bufferSize变化时调用。
              **/
             @Override
             public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
@@ -127,8 +145,9 @@ public class JTCameraView extends TextureView {
              */
             @Override
             public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                cleanTransform();
                 releaseCamera();
-                return false;
+                return true;
             }
 
             @Override
@@ -149,7 +168,7 @@ public class JTCameraView extends TextureView {
     }
 
     /**
-     * 转为后置（前置）摄像头
+     * 切换后置（前置）摄像头
      *
      * @param facing
      */
@@ -166,6 +185,8 @@ public class JTCameraView extends TextureView {
             mCameraId = mFacingBackCameraId;
         }
         mCameraFacing = facing;
+        setupCameraInfo();
+        cleanTransform();
         startPreview();
     }
 
@@ -175,14 +196,12 @@ public class JTCameraView extends TextureView {
 
     /**
      * 设置方向
-     *
-     * @param displayOrientation
      */
-    private void setDisplayOrientation(int displayOrientation) {
-        mDisplayOrientation = displayOrientation;
+    private void setDisplayOrientation() {
+        mPictureOrientation = calcCameraRotation(mDisplayOrientation);
+//            mCameraParameters.setRotation(mPictureOrientation);
+        mPreviewOrientation = calcDisplayOrientation(mDisplayOrientation);
         if (isCameraOpened()) {
-            mPictureOrientation = calcCameraRotation(displayOrientation);
-            mPreviewOrientation = calcDisplayOrientation(displayOrientation);
             mCamera.setParameters(mCameraParameters);
             mCamera.setDisplayOrientation(mPreviewOrientation);
         }
@@ -237,7 +256,6 @@ public class JTCameraView extends TextureView {
     /**
      * 获取Camera系统的信息
      */
-    @SuppressLint("NewApi")
     private void setupCameraInfo() {
         int sensorCount = Camera.getNumberOfCameras();
         for (int i = 0; i < sensorCount; i++) {
@@ -250,9 +268,6 @@ public class JTCameraView extends TextureView {
                 mFacingBackCameraId = i;
                 mFacingBackCameraInfo = cameraInfo;
             }
-        }
-        if (mCameraId != -1) {
-            return;
         }
         if (mFacingFrontCameraId == -1) {//只有后置摄像头，如山寨机，或其他奇葩设备
             mCameraId = mFacingBackCameraId;
@@ -278,10 +293,38 @@ public class JTCameraView extends TextureView {
         if (mCamera != null) {
             releaseCamera();
         }
-        mCamera = Camera.open(cameraId);
-        mCameraParameters = mCamera.getParameters();
+        this.mCamera = Camera.open(cameraId);
+        this.mCameraParameters = mCamera.getParameters();
+        this.sceneModeList = mCameraParameters.getSupportedSceneModes();
+        this.whiteBalanceModeList = mCameraParameters.getSupportedWhiteBalance();
+        this.colorEffectModeList = mCameraParameters.getSupportedColorEffects();
+        this.maxZoom = mCameraParameters.getMaxZoom();
         if (mListener != null) {
             mListener.onCameraOpend();
+        }
+    }
+
+    /**
+     * 设置情景模式
+     *
+     * @param mode
+     */
+    public void setSceneMode(String mode) {
+        mCameraParameters.setSceneMode(mode);
+        if (isCameraOpened()) {
+            mCamera.setParameters(mCameraParameters);
+        }
+    }
+
+    /**
+     * 设置白平衡模式
+     *
+     * @param mode
+     */
+    public void setWhiteBalanceMode(String mode) {
+        mCameraParameters.setWhiteBalance(mode);
+        if (isCameraOpened()) {
+            mCamera.setParameters(mCameraParameters);
         }
     }
 
@@ -290,24 +333,27 @@ public class JTCameraView extends TextureView {
     }
 
     /**
+     * 清除之前的图像处理，避免重复处理
+     */
+    private void cleanTransform() {
+        matrix.reset();
+        setTransform(matrix);
+    }
+
+    /**
      * 预览图像（surface）处理
      */
-    private boolean inited;
-
     private void configureTransform() {
-        if (inited) {
-            return;
-        }
         if (mSize == null || mPreviewSize == null) {
             return;
         }
-        Matrix matrix = getTransform(new Matrix());
+        matrix = getTransform(matrix);
 
         float sWidth = (float) mSize.getWidth();
         float sHeight = (float) mSize.getHeight();
 
         float pWidth, pHeight;
-        if (isLandscape(mPreviewOrientation)) {
+        if (isLandscape(mDisplayOrientation)) {
             pWidth = (float) mPreviewSize.width;
             pHeight = (float) mPreviewSize.height;
         } else {
@@ -338,7 +384,6 @@ public class JTCameraView extends TextureView {
 
         matrix.postScale(wScale, hScale, sWidth / 2, sHeight / 2);
         setTransform(matrix);
-        inited = true;
     }
 
 
@@ -382,9 +427,6 @@ public class JTCameraView extends TextureView {
      * 设置闪光灯模式
      */
     public void setFlashInternal(@Constants.FlashMode int flash) {
-        if (flash == mFlash) {
-            return;
-        }
         if (isCameraOpened()) {
             List<String> modes = mCameraParameters.getSupportedFlashModes();
             String mode = getFlashMode(flash);
@@ -397,8 +439,51 @@ public class JTCameraView extends TextureView {
                 mCameraParameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
                 mFlash = Constants.FLASH_OFF;
             }
+            mCamera.setParameters(mCameraParameters);
         } else {
             mFlash = flash;
+        }
+    }
+
+    /**
+     * 获取最小曝光度
+     *
+     * @return
+     */
+    public int getMinExposureCompensation() {
+        return mCameraParameters.getMinExposureCompensation();
+    }
+
+    /**
+     * 获取最大曝光度
+     *
+     * @return
+     */
+    public int getMaxExposureCompensation() {
+        return mCameraParameters.getMaxExposureCompensation();
+    }
+
+    /**
+     * 设置焦距
+     *
+     * @param value
+     */
+    public void setZoom(int value) {
+        mCameraParameters.setZoom(value);
+        if (isCameraOpened()) {
+            mCamera.setParameters(mCameraParameters);
+        }
+    }
+
+    /**
+     * 手动调整曝光度
+     *
+     * @param value
+     */
+    public void setExposure(int value) {
+        mCameraParameters.setExposureCompensation(value);
+        if (isCameraOpened()) {
+            mCamera.setParameters(mCameraParameters);
         }
     }
 
@@ -496,12 +581,114 @@ public class JTCameraView extends TextureView {
             });
             mCamera.setPreviewTexture(getSurfaceTexture());
             mCamera.startPreview();
+            startFaceDetector();
             isShowingPreview = true;
             if (mListener != null) {
                 mListener.onPreviewStart();
             }
         } catch (Exception e) {
             Log.e(TAG, "startPreview: ", e);
+        }
+    }
+
+
+    private Matrix faceMatrix = new Matrix();
+
+    /**
+     * 启动面部检测
+     */
+    private void startFaceDetector() {
+        if (mCameraParameters.getMaxNumDetectedFaces() > 0) {
+            faceMatrix.setScale(mCameraId == CAMERA_FACING_FRONT ? -1f : 1f, 1f);
+            faceMatrix.postRotate(mPreviewOrientation);
+            mCamera.setFaceDetectionListener(new Camera.FaceDetectionListener() {
+                @Override
+                public void onFaceDetection(Camera.Face[] faces, Camera camera) {
+                    Face[] translatedfaces = new Face[faces.length];
+                    RectF rectF = new RectF();
+                    for (int i = 0; i < faces.length; i++) {
+                        faceMatrix.mapRect(rectF, new RectF(faces[i].rect));
+                        translatedfaces[i] = new Face(faces[i], rectF);
+                    }
+                    mListener.onGetFaces(translatedfaces);
+                }
+            });
+            mCamera.startFaceDetection();
+        } else {
+            Log.e(TAG, "当前摄像头不支持面部检测！");
+        }
+    }
+
+    /**
+     * 手动对焦
+     *
+     * @param rect 屏幕对焦区域
+     */
+    public void focus(Rect rect) {
+        rect.left = (int) (rect.left / (float) getWidth() * 2000) - 1000;
+        rect.top = (int) (rect.top / (float) getHeight() * 2000) - 1000;
+        rect.right = (int) (rect.right / (float) getWidth() * 2000) - 1000;
+        rect.bottom = (int) (rect.bottom / (float) getHeight() * 2000) - 1000;
+        Camera.Area cameraArea = new Camera.Area(rect, 1000);
+        List<Camera.Area> meteringAreas = new ArrayList<Camera.Area>();
+        List<Camera.Area> focusAreas = new ArrayList<Camera.Area>();
+        if (mCameraParameters.getMaxNumMeteringAreas() > 0) {
+            meteringAreas.add(cameraArea);
+            focusAreas.add(cameraArea);
+        }
+        mCameraParameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO); // 设置对焦模式
+        mCameraParameters.setFocusAreas(focusAreas); // 设置对焦区域
+        mCameraParameters.setMeteringAreas(meteringAreas); // 设置测光区域
+
+        mCamera.cancelAutoFocus(); // 每次对焦前，需要先取消对焦
+        mCamera.setParameters(mCameraParameters); // 设置相机参数
+        mCamera.autoFocus(new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean success, Camera camera) {
+                int i = 0;
+            }
+        });
+    }
+
+    public static class Face {
+        private RectF rectF;
+        private int id;
+        private Point leftEye;
+        private Point rightEye;
+        private Point mouth;
+        private int score;
+
+        public Face(Camera.Face face, RectF rectF) {
+            id = face.id;
+            leftEye = face.leftEye;//这三个直接赋值原则上是肯定不对的，这里只是先这样写
+            rightEye = face.rightEye;
+            mouth = face.mouth;
+            score = face.score;
+            this.rectF = rectF;
+        }
+
+        public RectF getRectF() {
+            return rectF;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public Point getLeftEye() {
+            return leftEye;
+        }
+
+        public Point getRightEye() {
+            return rightEye;
+        }
+
+        public Point getMouth() {
+            return mouth;
+        }
+
+        public int getScore() {
+            return score;
         }
     }
 
@@ -544,7 +731,7 @@ public class JTCameraView extends TextureView {
         if (isPictureCaptureInProgress.getAndSet(true)) {
             return;
         }
-        Log.e(TAG, "takePictureInternal: 当值为"+isPictureCaptureInProgress+"时调用" );
+        Log.e(TAG, "takePictureInternal: 当值为" + isPictureCaptureInProgress + "时调用");
         mCamera.takePicture(new Camera.ShutterCallback() {
 
             @Override
@@ -561,14 +748,16 @@ public class JTCameraView extends TextureView {
                 Bitmap rawBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 rawBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-                Bitmap rotedBitmap;
 
-                if (mCameraFacing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                    rotedBitmap = BitmapUtils.mirror(rawBitmap);
-                } else {
-                    rotedBitmap = BitmapUtils.rotate(rawBitmap, 180f);
-                }
-                rawBitmap.recycle();
+//                Bitmap rotedBitmap;
+//
+//                if (mCameraFacing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+//                    rotedBitmap = BitmapUtils.mirror(rawBitmap);
+//                } else {
+//                    rotedBitmap = BitmapUtils.rotate(rawBitmap, 180f);
+//                }
+//                rawBitmap.recycle();
+                rawBitmap = mCameraFacing == Camera.CameraInfo.CAMERA_FACING_FRONT ? BitmapUtils.mirror(rawBitmap) : rawBitmap;
                 try {
                     baos.flush();
                     baos.close();
@@ -576,13 +765,13 @@ public class JTCameraView extends TextureView {
                     e.printStackTrace();
                 }
                 if (mListener != null) {
-                    mListener.onCupture(rotedBitmap);
+                    mListener.onCupture(rawBitmap);
                 }
                 camera.cancelAutoFocus();
                 camera.startPreview();
+
             }
         });
-
     }
 
     /**
@@ -632,21 +821,21 @@ public class JTCameraView extends TextureView {
         }
     }
 
-//    @Override
-//    protected void onAttachedToWindow() {
-//        super.onAttachedToWindow();
-//        if (!isInEditMode()) {
-//            mDisplayOrientationDetector.enable(ViewCompat.getDisplay(this));
-//        }
-//    }
-//
-//    @Override
-//    protected void onDetachedFromWindow() {
-//        if (!isInEditMode()) {
-//            mDisplayOrientationDetector.disable();
-//        }
-//        super.onDetachedFromWindow();
-//    }
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (!isInEditMode()) {
+            mDisplayOrientationDetector.enable(ViewCompat.getDisplay(this));
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (!isInEditMode()) {
+            mDisplayOrientationDetector.disable();
+        }
+        super.onDetachedFromWindow();
+    }
 
     /**
      * 相机成像尺寸比较器
@@ -678,4 +867,21 @@ public class JTCameraView extends TextureView {
             }
         }
     }
+
+    public List<String> getSceneModeList() {
+        return sceneModeList;
+    }
+
+    public List<String> getWhiteBalanceModeList() {
+        return whiteBalanceModeList;
+    }
+
+    public List<String> getColorEffectModeList() {
+        return colorEffectModeList;
+    }
+
+    public int getMaxZoom() {
+        return maxZoom;
+    }
+
 }
